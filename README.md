@@ -1,8 +1,14 @@
 # 📈 QuantPulse — US Tech Stock Analytics & Quantitative Strategy Engine
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-fintch--stock--dashboard.vercel.app-6366f1?style=for-the-badge&logo=vercel&logoColor=white)](https://fintch-stock-dashboard.vercel.app/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Status](https://img.shields.io/badge/Deployment-Active-10b981?style=for-the-badge)](https://fintch-stock-dashboard.vercel.app/)
+
+> 🚀 **Live Web App:** **[https://fintch-stock-dashboard.vercel.app/](https://fintch-stock-dashboard.vercel.app/)**
+
 A full-stack quantitative financial analytics dashboard and backtesting engine built to evaluate US mega-cap technology equities (**AAPL, NVDA, MSFT, TSLA, GOOGL, AMZN**). 
 
-QuantPulse integrates **statistical risk modeling**, **algorithmic trading strategy backtests**, and **domain-specific Natural Language Processing (NLP) sentiment analysis** into an interactive, glassmorphic dark-mode web application.
+QuantPulse integrates **statistical risk modeling**, **algorithmic trading strategy backtests**, **stochastic Monte Carlo simulations (Geometric Brownian Motion)**, and **domain-specific Natural Language Processing (NLP) sentiment analysis** into an interactive, glassmorphic dark-mode web application.
 
 ---
 
