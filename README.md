@@ -35,6 +35,12 @@ QuantPulse integrates **statistical risk modeling**, **algorithmic trading strat
   - Generates standard normal random market shocks ($Z \sim \mathcal{N}(0, 1)$) via the **Box-Muller transformation**.
   - Calculates probabilistic risk metrics: **Expected Median Target**, **95% Value at Risk (VaR)**, **Probability of Profit %**, and a **95% Confidence Interval Target Cone** (5th percentile floor to 95th percentile ceiling).
 
+- **💼 Modern Portfolio Theory & Markowitz Efficient Frontier:**
+  - Evaluates multi-asset covariance matrix $\boldsymbol{\Sigma}$ across all 6 US Tech assets.
+  - Simulates 1,200 random asset allocation vectors to map the **Markowitz Efficient Frontier**.
+  - Identifies the **Maximum Sharpe Ratio Portfolio (Optimal Risk-Adjusted Growth)** and **Minimum Volatility Portfolio (Capital Preservation)**.
+  - Real-time client-side portfolio simulator with interactive allocation sliders, live diversification risk reduction KPI, and dynamic Frontier scatter chart.
+
 - **🎨 Modern Glassmorphic UI & Visualizations:**
   - Interactive charts powered by **Plotly.js** (toggle between Price + Moving Averages, Daily Returns, and Monte Carlo Fan Charts).
   - Real-time **Risk vs. Return Leaderboard** ranking assets dynamically by Sharpe Ratio and AI signal.
@@ -61,6 +67,12 @@ $$w_{\text{negated}} = -0.8 \times w_{\text{base}}$$
 $$S_{t+1} = S_t \times \exp\left(\left(\mu - \frac{1}{2}\sigma^2\right) + \sigma \times Z\right)$$
 Where $\mu$ is historical daily drift, $\sigma$ is asset daily volatility, and $Z \sim \mathcal{N}(0, 1)$ is sampled via the Box-Muller transform:
 $$Z = \sqrt{-2 \ln(U_1)} \cos(2\pi U_2) \quad \text{for } U_1, U_2 \sim \text{Uniform}(0, 1)$$
+
+### 5. Markowitz Modern Portfolio Theory (Nobel Prize)
+$$\mathbb{E}[R_p] = \sum_{i=1}^n w_i \mathbb{E}[R_i] = \mathbf{w}^T \boldsymbol{\mu}$$
+$$\sigma_p = \sqrt{\mathbf{w}^T \boldsymbol{\Sigma} \mathbf{w}} = \sqrt{\sum_{i=1}^n \sum_{j=1}^n w_i w_j \text{Cov}(R_i, R_j)}$$
+$$\text{Diversification Benefit} = \sum_{i=1}^n w_i \sigma_i - \sigma_p$$
+Where $\mathbf{w}$ represents normalized portfolio weight vectors ($\sum w_i = 1$), and $\boldsymbol{\Sigma}$ is the annualized asset covariance matrix, demonstrating how cross-asset covariance cancels idiosyncratic volatility.
 
 ---
 

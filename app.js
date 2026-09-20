@@ -17,6 +17,7 @@ async function fetchStockData() {
         setupPills();
         renderDashboard(currentTicker);
         renderLeaderboard();
+        setupPortfolioOptimizer();
         setupEvents();
     } catch (err) {
         console.error("Error loading JSON:", err);
@@ -28,7 +29,9 @@ function setupPills() {
     const container = document.getElementById("tickerPills");
     container.innerHTML = "";
 
-    Object.keys(stockData).forEach(ticker => {
+    Object.keys(stockData)
+        .filter(t => t !== "portfolio_optimization")
+        .forEach(ticker => {
         const btn = document.createElement("button");
         btn.className = `pill-btn ${ticker === currentTicker ? 'active' : ''}`;
         btn.innerText = ticker;
@@ -367,6 +370,7 @@ function renderLeaderboard() {
     listContainer.innerHTML = "";
 
     const sorted = Object.keys(stockData)
+        .filter(t => t !== "portfolio_optimization")
         .map(t => ({ ticker: t, ...stockData[t].info }))
         .sort((a, b) => b.sharpe_ratio - a.sharpe_ratio);
 
@@ -523,6 +527,279 @@ function setupEvents() {
     if (btnRunMC) {
         btnRunMC.addEventListener("click", () => {
             renderChart(currentTicker);
+        });
+    }
+}
+
+let currentWeights = {};
+let portfolioData = null;
+
+function setupPortfolioOptimizer() {
+    portfolioData = stockData["portfolio_optimization"];
+    if (!portfolioData) return;
+
+    const defaultWeights = portfolioData.max_sharpe.weights;
+    currentWeights = { ...defaultWeights };
+
+    renderPortfolioSliders();
+    updatePortfolioCalculations();
+    renderFrontierChart();
+    setupPortfolioPresetEvents();
+}
+
+function renderPortfolioSliders() {
+    const container = document.getElementById("slidersContainer");
+    if (!container || !portfolioData) return;
+    container.innerHTML = "";
+
+    const tickers = Object.keys(portfolioData.ann_returns);
+
+    tickers.forEach(ticker => {
+        const weightPct = Math.round((currentWeights[ticker] || 0) * 100);
+        const row = document.createElement("div");
+        row.className = "alloc-slider-row";
+        row.innerHTML = `
+            <div class="slider-label-line">
+                <span>${ticker}</span>
+                <span class="slider-weight-val" id="weightVal_${ticker}">${weightPct}%</span>
+            </div>
+            <input type="range" class="alloc-slider" id="slider_${ticker}" min="0" max="100" value="${weightPct}">
+        `;
+        container.appendChild(row);
+
+        const slider = row.querySelector(`#slider_${ticker}`);
+        slider.addEventListener("input", (e) => {
+            const rawVal = parseInt(e.target.value);
+            document.getElementById(`weightVal_${ticker}`).innerText = `${rawVal}%`;
+            currentWeights[ticker] = rawVal / 100;
+            updatePortfolioCalculations();
+            updateFrontierCurrentPoint();
+        });
+    });
+}
+
+function updatePortfolioCalculations() {
+    if (!portfolioData) return null;
+    const tickers = Object.keys(portfolioData.ann_returns);
+
+    const rawSum = tickers.reduce((sum, t) => sum + (currentWeights[t] || 0), 0);
+    const pill = document.getElementById("totalWeightPill");
+    if (pill) {
+        const sumPct = Math.round(rawSum * 100);
+        pill.innerText = `Total: ${sumPct}%`;
+        if (sumPct === 100) {
+            pill.style.background = "rgba(16, 185, 129, 0.15)";
+            pill.style.color = "var(--accent-emerald)";
+            pill.style.borderColor = "rgba(16, 185, 129, 0.3)";
+        } else {
+            pill.style.background = "rgba(244, 63, 94, 0.15)";
+            pill.style.color = "var(--accent-rose)";
+            pill.style.borderColor = "rgba(244, 63, 94, 0.3)";
+        }
+    }
+
+    const normWeights = {};
+    const effectiveSum = rawSum > 0 ? rawSum : 1;
+    tickers.forEach(t => {
+        normWeights[t] = (currentWeights[t] || 0) / effectiveSum;
+    });
+
+    // 1. Portfolio Return: sum(w_i * mu_i)
+    let pReturn = 0;
+    tickers.forEach(t => {
+        pReturn += normWeights[t] * portfolioData.ann_returns[t];
+    });
+
+    // 2. Portfolio Volatility: sqrt(w^T * Cov * w)
+    let pVariance = 0;
+    tickers.forEach(t1 => {
+        tickers.forEach(t2 => {
+            pVariance += normWeights[t1] * normWeights[t2] * portfolioData.cov_matrix[t1][t2];
+        });
+    });
+    const pVol = Math.sqrt(Math.max(0, pVariance));
+
+    // 3. Sharpe Ratio
+    const rf = portfolioData.rf_annual || 0.045;
+    const pSharpe = pVol > 0 ? (pReturn - rf) / pVol : 0;
+
+    // 4. Diversification Benefit: sum(w_i * sigma_i) - pVol
+    let weightedIndividualVol = 0;
+    tickers.forEach(t => {
+        const singleVol = Math.sqrt(portfolioData.cov_matrix[t][t]);
+        weightedIndividualVol += normWeights[t] * singleVol;
+    });
+    const divBenefit = Math.max(0, weightedIndividualVol - pVol);
+
+    // Update KPIs
+    const elRet = document.getElementById("pkpiReturn");
+    if (elRet) elRet.innerText = `${pReturn >= 0 ? '+' : ''}${(pReturn * 100).toFixed(2)}%`;
+
+    const elVol = document.getElementById("pkpiVol");
+    if (elVol) elVol.innerText = `${(pVol * 100).toFixed(2)}%`;
+
+    const elSharpe = document.getElementById("pkpiSharpe");
+    if (elSharpe) elSharpe.innerText = pSharpe.toFixed(2);
+
+    const elDiv = document.getElementById("pkpiDivBenefit");
+    if (elDiv) elDiv.innerText = `-${(divBenefit * 100).toFixed(2)}% Risk`;
+
+    return {
+        returnPct: pReturn * 100,
+        volPct: pVol * 100,
+        sharpe: pSharpe
+    };
+}
+
+function renderFrontierChart() {
+    if (!portfolioData) return;
+    const frontierElem = document.getElementById("frontierChart");
+    if (!frontierElem) return;
+
+    const samples = portfolioData.frontier_sample || [];
+    const sampleVols = samples.map(s => s.volatility_pct);
+    const sampleRets = samples.map(s => s.return_pct);
+    const sampleSharpes = samples.map(s => s.sharpe_ratio);
+
+    const maxS = portfolioData.max_sharpe;
+    const minV = portfolioData.min_volatility;
+    const curStats = updatePortfolioCalculations();
+
+    const traces = [
+        // 1. Simulated Portfolios Cloud
+        {
+            x: sampleVols,
+            y: sampleRets,
+            mode: 'markers',
+            name: 'Simulated Portfolios',
+            marker: {
+                color: sampleSharpes,
+                colorscale: [
+                    [0, '#312e81'],
+                    [0.5, '#6366f1'],
+                    [1, '#06b6d4']
+                ],
+                size: 6,
+                opacity: 0.5,
+                colorbar: {
+                    title: { text: 'Sharpe', font: { color: '#94a3b8', size: 10 } },
+                    tickfont: { color: '#94a3b8', size: 9 },
+                    thickness: 10,
+                    len: 0.7
+                }
+            },
+            text: sampleSharpes.map(s => `Sharpe: ${s.toFixed(2)}`),
+            hoverinfo: 'x+y+text'
+        },
+        // 2. Min Volatility Point
+        {
+            x: [minV.volatility_pct],
+            y: [minV.return_pct],
+            mode: 'markers+text',
+            name: 'Min Volatility',
+            text: ['🛡️ Min Vol'],
+            textposition: 'bottom right',
+            textfont: { color: '#06b6d4', size: 11, family: 'Outfit, sans-serif' },
+            marker: { symbol: 'diamond', size: 14, color: '#06b6d4' }
+        },
+        // 3. Max Sharpe Point
+        {
+            x: [maxS.volatility_pct],
+            y: [maxS.return_pct],
+            mode: 'markers+text',
+            name: 'Max Sharpe (Optimal)',
+            text: ['⭐ Max Sharpe'],
+            textposition: 'top left',
+            textfont: { color: '#f59e0b', size: 11, family: 'Outfit, sans-serif' },
+            marker: { symbol: 'star', size: 16, color: '#f59e0b', line: { color: '#ffffff', width: 1.5 } }
+        },
+        // 4. Current User Selected Allocation
+        {
+            x: [curStats ? curStats.volPct : maxS.volatility_pct],
+            y: [curStats ? curStats.returnPct : maxS.return_pct],
+            mode: 'markers+text',
+            name: 'Current Portfolio',
+            text: ['📍 Current'],
+            textposition: 'top right',
+            textfont: { color: '#ec4899', size: 12, family: 'Outfit, sans-serif' },
+            marker: { symbol: 'circle', size: 14, color: '#ec4899', line: { color: '#ffffff', width: 2 } }
+        }
+    ];
+
+    const layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#94a3b8', family: 'Outfit, sans-serif' },
+        margin: { l: 50, r: 20, t: 20, b: 50 },
+        xaxis: {
+            title: { text: 'Annualized Risk (Volatility \u03c3%)', font: { size: 11 } },
+            gridcolor: 'rgba(255,255,255,0.05)',
+            zerolinecolor: 'rgba(255,255,255,0.1)'
+        },
+        yaxis: {
+            title: { text: 'Expected Return (%)', font: { size: 11 } },
+            gridcolor: 'rgba(255,255,255,0.05)',
+            zerolinecolor: 'rgba(255,255,255,0.1)'
+        },
+        legend: {
+            orientation: 'h',
+            y: 1.15,
+            x: 0
+        }
+    };
+
+    const config = { responsive: true, displayModeBar: false };
+    Plotly.newPlot('frontierChart', traces, layout, config);
+}
+
+function updateFrontierCurrentPoint() {
+    const curStats = updatePortfolioCalculations();
+    if (!curStats) return;
+    Plotly.restyle('frontierChart', {
+        x: [[curStats.volPct]],
+        y: [[curStats.returnPct]]
+    }, [3]);
+}
+
+function setupPortfolioPresetEvents() {
+    const btnMaxSharpe = document.getElementById("btnPresetMaxSharpe");
+    const btnMinVol = document.getElementById("btnPresetMinVol");
+    const btnEqual = document.getElementById("btnPresetEqual");
+
+    const clearActive = () => {
+        [btnMaxSharpe, btnMinVol, btnEqual].forEach(b => { if (b) b.classList.remove("active"); });
+    };
+
+    if (btnMaxSharpe) {
+        btnMaxSharpe.addEventListener("click", () => {
+            clearActive();
+            btnMaxSharpe.classList.add("active");
+            currentWeights = { ...portfolioData.max_sharpe.weights };
+            renderPortfolioSliders();
+            updatePortfolioCalculations();
+            updateFrontierCurrentPoint();
+        });
+    }
+
+    if (btnMinVol) {
+        btnMinVol.addEventListener("click", () => {
+            clearActive();
+            btnMinVol.classList.add("active");
+            currentWeights = { ...portfolioData.min_volatility.weights };
+            renderPortfolioSliders();
+            updatePortfolioCalculations();
+            updateFrontierCurrentPoint();
+        });
+    }
+
+    if (btnEqual) {
+        btnEqual.addEventListener("click", () => {
+            clearActive();
+            btnEqual.classList.add("active");
+            currentWeights = { ...portfolioData.equal_weight.weights };
+            renderPortfolioSliders();
+            updatePortfolioCalculations();
+            updateFrontierCurrentPoint();
         });
     }
 }

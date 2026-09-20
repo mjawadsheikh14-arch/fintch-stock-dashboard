@@ -169,9 +169,78 @@
                         <p class="formula">\( S_{t+\Delta t} = S_t \exp\left(\left(\mu - \frac{1}{2}\sigma^2\right)\Delta t + \sigma \sqrt{\Delta t} Z\right) \)</p>
                         <p>Simulating stochastic price paths where \(Z \sim \mathcal{N}(0, 1)\) models daily market shocks. Computes 95% Value at Risk (VaR) and distribution cones.</p>
                     </div>
+                    <div class="math-item">
+                        <strong>5. Markowitz Modern Portfolio Theory</strong>
+                        <p class="formula">\( \sigma_p = \sqrt{\mathbf{w}^T \boldsymbol{\Sigma} \mathbf{w}}, \quad \mathbb{E}[R_p] = \mathbf{w}^T \boldsymbol{\mu} \)</p>
+                        <p>Nobel Prize model proving that asset covariance \(\boldsymbol{\Sigma}\) cancels individual volatility, revealing the optimal Efficient Frontier.</p>
+                    </div>
                 </div>
             </div>
         </main>
+
+        <!-- Markowitz Modern Portfolio Optimizer Section -->
+        <section class="portfolio-optimizer-section">
+            <div class="glass-card portfolio-card">
+                <div class="portfolio-header">
+                    <div>
+                        <h2>💼 Modern Portfolio Optimizer (Markowitz Efficient Frontier)</h2>
+                        <p class="panel-desc">Nobel Prize-winning asset allocation modeling across all 6 US Tech equities</p>
+                    </div>
+                    <div class="portfolio-presets">
+                        <button class="preset-btn active" id="btnPresetMaxSharpe">⭐ Max Sharpe (Optimal Growth)</button>
+                        <button class="preset-btn" id="btnPresetMinVol">🛡️ Min Volatility (Capital Defense)</button>
+                        <button class="preset-btn" id="btnPresetEqual">⚖️ Equal Weight (1/N)</button>
+                    </div>
+                </div>
+
+                <!-- Portfolio KPI Grid -->
+                <div class="portfolio-kpi-grid">
+                    <div class="portfolio-kpi-box">
+                        <span class="pkpi-label">Expected Annual Return</span>
+                        <span class="pkpi-val positive" id="pkpiReturn">+0.0%</span>
+                        <span class="pkpi-sub">Weighted mean asset return</span>
+                    </div>
+                    <div class="portfolio-kpi-box">
+                        <span class="pkpi-label">Portfolio Volatility (Risk)</span>
+                        <span class="pkpi-val" id="pkpiVol" style="color: #06b6d4;">0.0%</span>
+                        <span class="pkpi-sub">Annualized covariance risk \(\sigma_p\)</span>
+                    </div>
+                    <div class="portfolio-kpi-box highlighted">
+                        <span class="pkpi-label">Portfolio Sharpe Ratio</span>
+                        <span class="pkpi-val" id="pkpiSharpe" style="color: #a855f7;">0.00</span>
+                        <span class="pkpi-sub">Excess return per unit of total risk</span>
+                    </div>
+                    <div class="portfolio-kpi-box">
+                        <span class="pkpi-label">Diversification Benefit</span>
+                        <span class="pkpi-val positive" id="pkpiDivBenefit">-0.0% Risk</span>
+                        <span class="pkpi-sub">Risk erased via covariance cancellation</span>
+                    </div>
+                </div>
+
+                <!-- Portfolio Two-Column Interactive Layout -->
+                <div class="portfolio-layout">
+                    <!-- Left Column: Sliders & Allocation Breakdown -->
+                    <div class="allocation-controls-box">
+                        <div class="alloc-title-row">
+                            <h3>Asset Weight Allocations</h3>
+                            <span class="total-weight-pill" id="totalWeightPill">Total: 100%</span>
+                        </div>
+                        <div class="sliders-container" id="slidersContainer">
+                            <!-- Populated dynamically by JS for each ticker -->
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Efficient Frontier Chart -->
+                    <div class="frontier-chart-box">
+                        <div class="frontier-header">
+                            <h3>Markowitz Efficient Frontier & Capital Allocation Line</h3>
+                            <span class="frontier-legend-note">● Simulated Portfolios &nbsp; ⭐ Max Sharpe &nbsp; 🛡️ Min Vol &nbsp; 📍 Current</span>
+                        </div>
+                        <div id="frontierChart" class="frontier-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <!-- Real-Time AI News & Sentiment Feed Section -->
         <section class="news-sentiment-section">
