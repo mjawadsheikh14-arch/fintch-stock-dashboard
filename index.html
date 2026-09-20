@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTech Market Analytics & Strategy Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Plotly.js for interactive financial charts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-globes">
+        <div class="globe globe-1"></div>
+        <div class="globe globe-2"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="brand">
+                <div class="logo-icon">📈</div>
+                <div>
+                    <h1>QuantPulse <span class="badge">FinTech AI</span></h1>
+                    <p class="subtitle">US Tech Stocks Analytics & Strategy Backtesting Engine</p>
+                </div>
+            </div>
+            <div class="user-pill">
+                <span class="pulse-dot"></span> Real-Time Data Active
+            </div>
+        </header>
+
+        <!-- Stock Selector Bar -->
+        <section class="controls-section">
+            <div class="selector-title">Select Tech Asset:</div>
+            <div class="ticker-pills" id="tickerPills">
+                <!-- Dynamically filled by app.js -->
+            </div>
+        </section>
+
+        <!-- Key Stats Grid -->
+        <section class="metrics-grid">
+            <div class="glass-card metric-card">
+                <div class="card-label">Current Price</div>
+                <div class="card-value" id="valPrice">$0.00</div>
+                <div class="card-sub" id="subPrice">52W Range: -</div>
+            </div>
+            <div class="glass-card metric-card">
+                <div class="card-label">1-Year Total Return</div>
+                <div class="card-value" id="valReturn">0.0%</div>
+                <div class="card-sub" id="subReturn">Buy & Hold Benchmark</div>
+            </div>
+            <div class="glass-card metric-card highlighted">
+                <div class="card-label">Sharpe Ratio <span class="info-tip" title="Risk-Adjusted Return metric">?</span></div>
+                <div class="card-value" id="valSharpe">0.00</div>
+                <div class="card-sub" id="subSharpe">Reward per unit of risk</div>
+            </div>
+            <div class="glass-card metric-card">
+                <div class="card-label">Annual Volatility</div>
+                <div class="card-value" id="valVol">0.0%</div>
+                <div class="card-sub" id="subVol">Risk / Fluctuational Standard Deviation</div>
+            </div>
+            <div class="glass-card metric-card highlight-green">
+                <div class="card-label">Golden Cross Strategy</div>
+                <div class="card-value" id="valStrategy">0.0%</div>
+                <div class="card-sub" id="subStrategy">20-MA / 50-MA Algorithmic Backtest</div>
+            </div>
+            <div class="glass-card metric-card highlight-sentiment">
+                <div class="card-label">AI Sentiment Pulse <span class="info-tip" title="Domain-specific Quantitative NLP Polarity Index">?</span></div>
+                <div class="card-value" id="valSentiment">0.00</div>
+                <div class="card-sub" id="subSentiment">Market News Sentiment</div>
+            </div>
+        </section>
+
+        <!-- Main Analytics Section -->
+        <main class="analytics-layout">
+            <!-- Main Chart Area -->
+            <div class="glass-card chart-card">
+                <div class="chart-header">
+                    <h2 id="chartTitle">Price History & Moving Averages</h2>
+                    <div class="chart-toggle">
+                        <button class="toggle-btn active" id="btnPrice">Price + MAs</button>
+                        <button class="toggle-btn" id="btnReturns">Daily Returns</button>
+                    </div>
+                </div>
+                <div id="plotlyChart" class="chart-container"></div>
+            </div>
+
+            <!-- Side Comparison & Math Explainer -->
+            <div class="side-panel">
+                <div class="glass-card comparison-card">
+                    <h3>Risk vs. Return Leaderboard</h3>
+                    <p class="panel-desc">All 6 Tech Assets Ranked by Sharpe Ratio</p>
+                    <div class="leaderboard-list" id="leaderboardList">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <div class="glass-card explainer-card">
+                    <h3>🎓 Quantitative Math Concepts</h3>
+                    <div class="math-item">
+                        <strong>1. Moving Average (MA)</strong>
+                        <p>Smoothes out daily noise to reveal trend direction. A 20-MA crossing above a 50-MA is called a <em>Golden Cross</em> signal.</p>
+                    </div>
+                    <div class="math-item">
+                        <strong>2. Sharpe Ratio Formula</strong>
+                        <p class="formula">\( Sharpe = \frac{R_p - R_f}{\sigma_p} \)</p>
+                        <p>Higher Sharpe ratio = better return for every dollar of risk taken!</p>
+                    </div>
+                    <div class="math-item">
+                        <strong>3. Quantitative NLP Sentiment</strong>
+                        <p class="formula">\( S = \frac{\sum w_{\text{pos}} - \sum w_{\text{neg}}}{\sqrt{(\sum w)^2 + 15}} \)</p>
+                        <p>Financial dictionary scoring news headlines in [-1.0, +1.0] with negation detection and intensifiers.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Real-Time AI News & Sentiment Feed Section -->
+        <section class="news-sentiment-section">
+            <div class="glass-card news-card">
+                <div class="news-header">
+                    <div>
+                        <h2>⚡ Real-Time Market News & AI Sentiment Pulse</h2>
+                        <p class="panel-desc">Algorithmic NLP scoring powered by Loughran-McDonald domain lexicon</p>
+                    </div>
+                    <div class="sentiment-meter-box">
+                        <div class="meter-header">
+                            <span class="meter-label">Sentiment Breakdown</span>
+                            <div class="meter-stats" id="meterStats">
+                                <span class="meter-stat green"><span class="dot green"></span> Bullish: 0%</span>
+                                <span class="meter-stat slate"><span class="dot slate"></span> Neutral: 0%</span>
+                                <span class="meter-stat red"><span class="dot red"></span> Bearish: 0%</span>
+                            </div>
+                        </div>
+                        <div class="sentiment-bar-track">
+                            <div class="bar-fill bullish-fill" id="barBullish" style="width: 33%" title="Bullish"></div>
+                            <div class="bar-fill neutral-fill" id="barNeutral" style="width: 34%" title="Neutral"></div>
+                            <div class="bar-fill bearish-fill" id="barBearish" style="width: 33%" title="Bearish"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="news-grid" id="newsFeed">
+                    <!-- Populated dynamically by app.js -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

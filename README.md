@@ -1,0 +1,87 @@
+# 📈 QuantPulse — US Tech Stock Analytics & Quantitative Strategy Engine
+
+A full-stack quantitative financial analytics dashboard and backtesting engine built to evaluate US mega-cap technology equities (**AAPL, NVDA, MSFT, TSLA, GOOGL, AMZN**). 
+
+QuantPulse integrates **statistical risk modeling**, **algorithmic trading strategy backtests**, and **domain-specific Natural Language Processing (NLP) sentiment analysis** into an interactive, glassmorphic dark-mode web application.
+
+---
+
+## ✨ Key Features
+
+- **📊 Comprehensive Risk & Performance Engine:**
+  - 1-Year Cumulative Total Return % vs. Buy & Hold benchmark.
+  - 52-Week Price Range tracking.
+  - **Annualized Volatility** computed via standard deviation of daily logarithmic returns scaled across 252 trading days ($\sigma \times \sqrt{252}$).
+  - **Sharpe Ratio** evaluating excess return over the risk-free rate ($R_f = 4.5\%$).
+
+- **⚡ Algorithmic Trading Strategy Backtester:**
+  - Backtests the classical **Golden Cross / Death Cross** trend-following strategy using a 20-Day Simple Moving Average (SMA) crossing a 50-Day SMA.
+  - Computes cumulative compounded return comparison vs. the standard asset trajectory.
+
+- **🤖 Quantitative Financial NLP Sentiment Engine:**
+  - Real-time financial news ingestion via `yfinance`.
+  - Scored using a domain-specific financial lexicon modeled after the **Loughran-McDonald Financial Dictionary**.
+  - Context-aware NLP with **3-token backward negation modeling** (e.g., *"not declining"*, *"fails to meet"*) and **intensifier multipliers** (*"record"*, *"surging"*).
+  - Calculates normalized polarity scores in range $[-1.0, +1.0]$, alongside Bullish / Neutral / Bearish distribution meters and clickable headline cards.
+
+- **🎨 Modern Glassmorphic UI & Visualizations:**
+  - Interactive charts powered by **Plotly.js** (toggle between Price + Moving Averages and Daily Return Volatility distributions).
+  - Real-time **Risk vs. Return Leaderboard** ranking assets dynamically by Sharpe Ratio and AI signal.
+  - Responsive dark-mode interface with CSS glassmorphism.
+
+---
+
+## 📐 Mathematical & Financial Formulations
+
+### 1. Annualized Volatility
+$$\sigma_{\text{ann}} = \sigma_{\text{daily}} \times \sqrt{252}$$
+Where $\sigma_{\text{daily}} = \sqrt{\frac{1}{N-1} \sum_{i=1}^N (R_i - \bar{R})^2}$, scaling daily standard deviation across the 252 trading days in a standard US exchange calendar year.
+
+### 2. Sharpe Ratio
+$$\text{Sharpe Ratio} = \frac{\bar{R}_p - R_f}{\sigma_p}$$
+Measures the risk-adjusted excess return per unit of portfolio volatility relative to a risk-free rate assumption ($R_f = 4.5\%$).
+
+### 3. Quantitative NLP Polarity Score
+$$S_{\text{norm}} = \frac{\sum w_{\text{pos}} - \sum w_{\text{neg}}}{\sqrt{(\sum w)^2 + 15}}$$
+Where $w$ represents domain-weighted sentiment tokens adjusted for preceding negation operators:
+$$w_{\text{negated}} = -0.8 \times w_{\text{base}}$$
+
+---
+
+## 🛠️ Tech Stack & Architecture
+
+- **Backend & Quantitative Modeling:** Python 3.12, `pandas`, `numpy`, `yfinance`
+- **NLP & Text Processing:** Domain-specific Loughran-McDonald lexicon tokenizer with regex and context window analysis (`sentiment.py`)
+- **Frontend & Visualization:** Vanilla JavaScript (ES6+), Plotly.js, HTML5, CSS3 (Glassmorphism, CSS Grid, Flexbox)
+
+---
+
+## 🚀 Local Development Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/fintech-stock-dashboard.git
+   cd fintech-stock-dashboard
+   ```
+
+2. **Install Python dependencies:**
+   ```bash
+   pip install yfinance pandas numpy
+   ```
+
+3. **Fetch latest market data & run NLP analysis:**
+   ```bash
+   python fetch_data.py
+   ```
+
+4. **Launch the local dashboard server:**
+   ```bash
+   python -m http.server 8000
+   ```
+   Open `http://localhost:8000` in your web browser.
+
+---
+
+## 👤 Author
+
+- **MJ** — High School Student & Aspiring Computer Science / Financial Data Science Major
