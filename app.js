@@ -1,6 +1,8 @@
 let stockData = {};
 let currentTicker = "AAPL";
-let currentView = "price"; // 'price' or 'returns'
+let currentView = "price"; // 'price', 'returns', or 'montecarlo'
+let mcDays = 30;
+let mcPaths = 100;
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchStockData();
@@ -81,8 +83,105 @@ function renderDashboard(ticker) {
     renderSentimentNews(ticker);
 }
 
+function gaussianRandom() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function generateFutureBusinessDays(startDateStr, days) {
+    const dates = [];
+    let current = new Date(startDateStr);
+    while (dates.length < days) {
+        current.setDate(current.getDate() + 1);
+        const dayOfWeek = current.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sunday (0) and Saturday (6)
+            dates.push(current.toISOString().split("T")[0]);
+        }
+    }
+    return dates;
+}
+
+function runMonteCarloSimulation(ticker, horizonDays, numPaths) {
+    const data = stockData[ticker];
+    if (!data) return null;
+
+    const info = data.info;
+    const history = data.history;
+    const S0 = info.latest_price;
+
+    let mu = info.daily_drift;
+    let sigma = info.daily_volatility;
+
+    if (mu === undefined || sigma === undefined) {
+        const returns = history.map(h => h.Daily_Return).filter(r => r !== 0);
+        const n = returns.length;
+        mu = returns.reduce((a, b) => a + b, 0) / (n || 1);
+        const variance = returns.reduce((a, b) => a + Math.pow(b - mu, 2), 0) / Math.max(n - 1, 1);
+        sigma = Math.sqrt(variance);
+    }
+
+    const lastDate = history[history.length - 1].Date;
+    const futureDates = [lastDate, ...generateFutureBusinessDays(lastDate, horizonDays)];
+
+    // Simulate Geometric Brownian Motion paths
+    const paths = [];
+    const driftTerm = mu - 0.5 * sigma * sigma;
+
+    for (let p = 0; p < numPaths; p++) {
+        const path = [S0];
+        let currentPrice = S0;
+        for (let d = 1; d <= horizonDays; d++) {
+            const z = gaussianRandom();
+            currentPrice = currentPrice * Math.exp(driftTerm + sigma * z);
+            path.push(currentPrice);
+        }
+        paths.push(path);
+    }
+
+    // Calculate percentiles at each day step
+    const p5Series = [];
+    const p50Series = [];
+    const p95Series = [];
+
+    for (let d = 0; d <= horizonDays; d++) {
+        const dayPrices = paths.map(p => p[d]).sort((a, b) => a - b);
+        const idx5 = Math.floor(0.05 * (numPaths - 1));
+        const idx50 = Math.floor(0.50 * (numPaths - 1));
+        const idx95 = Math.floor(0.95 * (numPaths - 1));
+
+        p5Series.push(dayPrices[idx5]);
+        p50Series.push(dayPrices[idx50]);
+        p95Series.push(dayPrices[idx95]);
+    }
+
+    const finalPrices = paths.map(p => p[horizonDays]).sort((a, b) => a - b);
+    const medianFinal = p50Series[horizonDays];
+    const medianReturnPct = ((medianFinal - S0) / S0) * 100;
+    const var95Pct = ((p5Series[horizonDays] - S0) / S0) * 100;
+    const profitablePaths = finalPrices.filter(p => p > S0).length;
+    const probProfitPct = (profitablePaths / numPaths) * 100;
+
+    return {
+        futureDates,
+        paths,
+        p5Series,
+        p50Series,
+        p95Series,
+        S0,
+        medianFinal,
+        medianReturnPct,
+        var95Pct,
+        probProfitPct,
+        p5Final: p5Series[horizonDays],
+        p95Final: p95Series[horizonDays]
+    };
+}
+
 function renderChart(ticker) {
     const data = stockData[ticker];
+    if (!data) return;
     const history = data.history;
 
     const dates = history.map(d => d.Date);
@@ -92,6 +191,16 @@ function renderChart(ticker) {
     const returns = history.map(d => d.Daily_Return * 100);
 
     const titleElem = document.getElementById("chartTitle");
+    const mcControls = document.getElementById("mcControls");
+    const mcMetrics = document.getElementById("mcMetricsPanel");
+
+    if (currentView === "montecarlo") {
+        if (mcControls) mcControls.style.display = "flex";
+        if (mcMetrics) mcMetrics.style.display = "grid";
+    } else {
+        if (mcControls) mcControls.style.display = "none";
+        if (mcMetrics) mcMetrics.style.display = "none";
+    }
     
     let traces = [];
     if (currentView === "price") {
@@ -122,7 +231,7 @@ function renderChart(ticker) {
                 line: { color: '#10b981', width: 1.5 }
             }
         ];
-    } else {
+    } else if (currentView === "returns") {
         titleElem.innerText = `${ticker} — Daily Return Volatility (%)`;
         traces = [
             {
@@ -135,6 +244,98 @@ function renderChart(ticker) {
                 }
             }
         ];
+    } else if (currentView === "montecarlo") {
+        titleElem.innerText = `${ticker} — Monte Carlo Simulation (${mcDays}D Horizon, ${mcPaths} Paths)`;
+        const sim = runMonteCarloSimulation(ticker, mcDays, mcPaths);
+
+        if (sim) {
+            const medSign = sim.medianReturnPct >= 0 ? "+" : "";
+            const elMedian = document.getElementById("mcValMedian");
+            if (elMedian) {
+                elMedian.innerText = `$${sim.medianFinal.toFixed(2)} (${medSign}${sim.medianReturnPct.toFixed(1)}%)`;
+                elMedian.className = `mc-box-val ${sim.medianReturnPct >= 0 ? 'positive' : 'negative'}`;
+            }
+
+            const elVaR = document.getElementById("mcValVaR");
+            if (elVaR) {
+                elVaR.innerText = `${sim.var95Pct.toFixed(1)}%`;
+                elVaR.className = `mc-box-val ${sim.var95Pct >= 0 ? 'positive' : 'negative'}`;
+            }
+
+            const elProb = document.getElementById("mcValProb");
+            if (elProb) {
+                elProb.innerText = `${sim.probProfitPct.toFixed(1)}%`;
+                elProb.className = `mc-box-val ${sim.probProfitPct >= 50 ? 'positive' : 'negative'}`;
+            }
+
+            const elCone = document.getElementById("mcValCone");
+            if (elCone) {
+                elCone.innerText = `$${sim.p5Final.toFixed(2)} - $${sim.p95Final.toFixed(2)}`;
+            }
+
+            // Recent 45 trading days for context
+            const histSlice = history.slice(-45);
+            const histDates = histSlice.map(d => d.Date);
+            const histPrices = histSlice.map(d => d.Close);
+
+            traces = [];
+
+            // 1. Historical Context Line
+            traces.push({
+                x: histDates,
+                y: histPrices,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Recent History',
+                line: { color: '#94a3b8', width: 1.5 }
+            });
+
+            // 2. Individual Simulated Paths (render sample up to 50 paths for performance)
+            const samplePaths = sim.paths.slice(0, Math.min(sim.paths.length, 50));
+            samplePaths.forEach((path) => {
+                traces.push({
+                    x: sim.futureDates,
+                    y: path,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: 'rgba(99, 102, 241, 0.12)', width: 1 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+            });
+
+            // 3. Lower 5th Percentile Bound (Bear Floor)
+            traces.push({
+                x: sim.futureDates,
+                y: sim.p5Series,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Worst 5% (Bear Bound)',
+                line: { color: '#f43f5e', width: 2, dash: 'dash' }
+            });
+
+            // 4. Upper 95th Percentile Bound (Bull Ceiling with confidence fill)
+            traces.push({
+                x: sim.futureDates,
+                y: sim.p95Series,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Best 95% (Bull Bound)',
+                fill: 'tonexty',
+                fillcolor: 'rgba(99, 102, 241, 0.08)',
+                line: { color: '#06b6d4', width: 2, dash: 'dash' }
+            });
+
+            // 5. 50th Percentile Median Expected Trajectory
+            traces.push({
+                x: sim.futureDates,
+                y: sim.p50Series,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Expected Path (Median)',
+                line: { color: '#10b981', width: 3 }
+            });
+        }
     }
 
     const layout = {
@@ -270,11 +471,14 @@ function renderSentimentNews(ticker) {
 function setupEvents() {
     const btnPrice = document.getElementById("btnPrice");
     const btnReturns = document.getElementById("btnReturns");
+    const btnMonteCarlo = document.getElementById("btnMonteCarlo");
+    const btnRunMC = document.getElementById("btnRunMC");
 
     btnPrice.addEventListener("click", () => {
         currentView = "price";
         btnPrice.classList.add("active");
         btnReturns.classList.remove("active");
+        if (btnMonteCarlo) btnMonteCarlo.classList.remove("active");
         renderChart(currentTicker);
     });
 
@@ -282,6 +486,43 @@ function setupEvents() {
         currentView = "returns";
         btnReturns.classList.add("active");
         btnPrice.classList.remove("active");
+        if (btnMonteCarlo) btnMonteCarlo.classList.remove("active");
         renderChart(currentTicker);
     });
+
+    if (btnMonteCarlo) {
+        btnMonteCarlo.addEventListener("click", () => {
+            currentView = "montecarlo";
+            btnMonteCarlo.classList.add("active");
+            btnPrice.classList.remove("active");
+            btnReturns.classList.remove("active");
+            renderChart(currentTicker);
+        });
+    }
+
+    // Monte Carlo Horizon Pills
+    document.querySelectorAll("#mcHorizonPills .mc-pill-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#mcHorizonPills .mc-pill-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            mcDays = parseInt(btn.getAttribute("data-days")) || 30;
+            renderChart(currentTicker);
+        });
+    });
+
+    // Monte Carlo Paths Pills
+    document.querySelectorAll("#mcPathsPills .mc-pill-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#mcPathsPills .mc-pill-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            mcPaths = parseInt(btn.getAttribute("data-paths")) || 100;
+            renderChart(currentTicker);
+        });
+    });
+
+    if (btnRunMC) {
+        btnRunMC.addEventListener("click", () => {
+            renderChart(currentTicker);
+        });
+    }
 }

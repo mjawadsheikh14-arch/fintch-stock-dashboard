@@ -46,6 +46,9 @@ def analyze_stocks():
         # Sharpe Ratio = (Mean Return - Risk Free Rate) / Volatility
         sharpe_ratio = round(float(((avg_daily_return - rf_daily) / std_daily_return) * np.sqrt(252)), 2) if std_daily_return != 0 else 0.0
 
+        daily_drift = float(avg_daily_return)
+        daily_vol = float(std_daily_return)
+
         # Simple Trading Strategy Backtest: 20-MA crossing above 50-MA (Golden Cross)
         df['Signal'] = np.where(df['MA_20'] > df['MA_50'], 1, 0)
         df['Strategy_Return'] = df['Signal'].shift(1) * df['Daily_Return']
@@ -65,6 +68,8 @@ def analyze_stocks():
                 "latest_price": round(latest_price, 2),
                 "total_return_pct": total_return_pct,
                 "annualized_volatility_pct": annualized_volatility,
+                "daily_drift": round(daily_drift, 6),
+                "daily_volatility": round(daily_vol, 6),
                 "sharpe_ratio": sharpe_ratio,
                 "strategy_return_pct": round(strategy_cumulative, 2),
                 "high_52w": round(high_52w, 2),

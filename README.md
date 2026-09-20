@@ -24,8 +24,13 @@ QuantPulse integrates **statistical risk modeling**, **algorithmic trading strat
   - Context-aware NLP with **3-token backward negation modeling** (e.g., *"not declining"*, *"fails to meet"*) and **intensifier multipliers** (*"record"*, *"surging"*).
   - Calculates normalized polarity scores in range $[-1.0, +1.0]$, alongside Bullish / Neutral / Bearish distribution meters and clickable headline cards.
 
+- **🎲 Monte Carlo Price Simulation & Tail Risk Engine:**
+  - Projects 50 to 250 stochastic future asset trajectories over 30, 60, and 90 trading days using **Geometric Brownian Motion (GBM)**.
+  - Generates standard normal random market shocks ($Z \sim \mathcal{N}(0, 1)$) via the **Box-Muller transformation**.
+  - Calculates probabilistic risk metrics: **Expected Median Target**, **95% Value at Risk (VaR)**, **Probability of Profit %**, and a **95% Confidence Interval Target Cone** (5th percentile floor to 95th percentile ceiling).
+
 - **🎨 Modern Glassmorphic UI & Visualizations:**
-  - Interactive charts powered by **Plotly.js** (toggle between Price + Moving Averages and Daily Return Volatility distributions).
+  - Interactive charts powered by **Plotly.js** (toggle between Price + Moving Averages, Daily Returns, and Monte Carlo Fan Charts).
   - Real-time **Risk vs. Return Leaderboard** ranking assets dynamically by Sharpe Ratio and AI signal.
   - Responsive dark-mode interface with CSS glassmorphism.
 
@@ -45,6 +50,11 @@ Measures the risk-adjusted excess return per unit of portfolio volatility relati
 $$S_{\text{norm}} = \frac{\sum w_{\text{pos}} - \sum w_{\text{neg}}}{\sqrt{(\sum w)^2 + 15}}$$
 Where $w$ represents domain-weighted sentiment tokens adjusted for preceding negation operators:
 $$w_{\text{negated}} = -0.8 \times w_{\text{base}}$$
+
+### 4. Geometric Brownian Motion (Monte Carlo Price Paths)
+$$S_{t+1} = S_t \times \exp\left(\left(\mu - \frac{1}{2}\sigma^2\right) + \sigma \times Z\right)$$
+Where $\mu$ is historical daily drift, $\sigma$ is asset daily volatility, and $Z \sim \mathcal{N}(0, 1)$ is sampled via the Box-Muller transform:
+$$Z = \sqrt{-2 \ln(U_1)} \cos(2\pi U_2) \quad \text{for } U_1, U_2 \sim \text{Uniform}(0, 1)$$
 
 ---
 

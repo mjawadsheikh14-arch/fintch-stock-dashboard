@@ -84,9 +84,58 @@
                     <div class="chart-toggle">
                         <button class="toggle-btn active" id="btnPrice">Price + MAs</button>
                         <button class="toggle-btn" id="btnReturns">Daily Returns</button>
+                        <button class="toggle-btn" id="btnMonteCarlo">🎲 Monte Carlo Simulation</button>
                     </div>
                 </div>
+
+                <!-- Monte Carlo Simulation Control Bar -->
+                <div class="mc-controls-bar" id="mcControls" style="display: none;">
+                    <div class="mc-control-item">
+                        <span class="mc-label">Forecast Horizon:</span>
+                        <div class="mc-pills" id="mcHorizonPills">
+                            <button class="mc-pill-btn active" data-days="30">30 Days (1M)</button>
+                            <button class="mc-pill-btn" data-days="60">60 Days (2M)</button>
+                            <button class="mc-pill-btn" data-days="90">90 Days (1Q)</button>
+                        </div>
+                    </div>
+                    <div class="mc-control-item">
+                        <span class="mc-label">Simulation Paths:</span>
+                        <div class="mc-pills" id="mcPathsPills">
+                            <button class="mc-pill-btn" data-paths="50">50 Paths</button>
+                            <button class="mc-pill-btn active" data-paths="100">100 Paths</button>
+                            <button class="mc-pill-btn" data-paths="250">250 Paths</button>
+                        </div>
+                    </div>
+                    <button class="mc-run-btn" id="btnRunMC">
+                        <span class="pulse-icon">⚡</span> Run Simulation
+                    </button>
+                </div>
+
                 <div id="plotlyChart" class="chart-container"></div>
+
+                <!-- Monte Carlo Risk Metrics Bar -->
+                <div class="mc-metrics-panel" id="mcMetricsPanel" style="display: none;">
+                    <div class="mc-metric-box">
+                        <div class="mc-box-label">Expected Median Target</div>
+                        <div class="mc-box-val" id="mcValMedian">$0.00 (+0.0%)</div>
+                        <div class="mc-box-sub" id="mcSubMedian">50th Percentile Trajectory</div>
+                    </div>
+                    <div class="mc-metric-box">
+                        <div class="mc-box-label">95% Value at Risk (VaR)</div>
+                        <div class="mc-box-val negative" id="mcValVaR">-0.0%</div>
+                        <div class="mc-box-sub">Max expected drawdown at 95% conf.</div>
+                    </div>
+                    <div class="mc-metric-box">
+                        <div class="mc-box-label">Probability of Profit</div>
+                        <div class="mc-box-val positive" id="mcValProb">0.0%</div>
+                        <div class="mc-box-sub">Paths ending above today's price</div>
+                    </div>
+                    <div class="mc-metric-box">
+                        <div class="mc-box-label">95% Target Cone (5th - 95th)</div>
+                        <div class="mc-box-val" id="mcValCone">$0.00 - $0.00</div>
+                        <div class="mc-box-sub">Bearish floor to Bullish ceiling</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Side Comparison & Math Explainer -->
@@ -114,6 +163,11 @@
                         <strong>3. Quantitative NLP Sentiment</strong>
                         <p class="formula">\( S = \frac{\sum w_{\text{pos}} - \sum w_{\text{neg}}}{\sqrt{(\sum w)^2 + 15}} \)</p>
                         <p>Financial dictionary scoring news headlines in [-1.0, +1.0] with negation detection and intensifiers.</p>
+                    </div>
+                    <div class="math-item">
+                        <strong>4. Geometric Brownian Motion (Monte Carlo)</strong>
+                        <p class="formula">\( S_{t+\Delta t} = S_t \exp\left(\left(\mu - \frac{1}{2}\sigma^2\right)\Delta t + \sigma \sqrt{\Delta t} Z\right) \)</p>
+                        <p>Simulating stochastic price paths where \(Z \sim \mathcal{N}(0, 1)\) models daily market shocks. Computes 95% Value at Risk (VaR) and distribution cones.</p>
                     </div>
                 </div>
             </div>
